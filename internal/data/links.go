@@ -3,6 +3,8 @@ package data
 import (
 	"database/sql"
 	"math/rand"
+
+	"github.com/abdelkd/linkly/internal/util"
 )
 
 type CreateLinkRequest struct {
@@ -25,8 +27,8 @@ type LinksModel struct {
 
 func (l *LinksModel) Add(link *Link) error {
 	query := `
-	  INSERT INTO links (url, code)
-	  VALUES ($1, $2)
+	  INSERT INTO links (url, code, hash)
+	  VALUES ($1, $2, $3)
 		RETURNING code;
 	`
 
@@ -39,7 +41,9 @@ func (l *LinksModel) Add(link *Link) error {
 		buf[i] = alphabets[randInt]
 	}
 
-	return l.DB.QueryRow(query, link.Url, string(buf)).Scan(&link.Code)
+	args := []interface{}{link.Url, string(buf), util.HashString(link.Url)}
+
+	return l.DB.QueryRow(query, args...).Scan(&link.Code)
 }
 
 func (l *LinksModel) Get(code string) (string, error) {
@@ -53,6 +57,22 @@ func (l *LinksModel) Get(code string) (string, error) {
 	err := l.DB.QueryRow(query, code).Scan(&url)
 
 	return url, err
+}
+
+func (l *LinksModel) GetByHashCode(hashCode string) (*Link, error) {
+	query := `
+	  SELECT url, code
+	  FROM links
+	  WHERE hash = $1;
+	`
+
+	var link Link
+	err := l.DB.QueryRow(query, hashCode).Scan(&link.Url, &link.Code)
+	if err != nil {
+		return nil, err
+	}
+
+	return &link, nil
 }
 
 type Models struct {

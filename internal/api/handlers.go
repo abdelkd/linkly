@@ -1,10 +1,13 @@
 package api
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/abdelkd/linkly/internal/data"
+	"github.com/abdelkd/linkly/internal/util"
 	"github.com/abdelkd/linkly/internal/validator"
 )
 
@@ -43,6 +46,23 @@ func (app *Application) handleNewLink(w http.ResponseWriter, r *http.Request) {
 		app.InfoLog.Println("invalid url")
 		app.jsonMessage(w, "location must be a valid url", false, http.StatusBadRequest)
 		return
+	}
+
+	app.InfoLog.Printf("Location: %s, Hash: %s", request.Location, util.HashString(request.Location))
+
+	linkByHash, err := app.Models.Links.GetByHashCode(util.HashString(request.Location))
+	if !errors.Is(err, sql.ErrNoRows) {
+		if err != nil {
+			app.ErrorLog.Fatal(err)
+		}
+
+		if linkByHash != nil {
+			response.Link = linkByHash.Url
+			response.Code = linkByHash.Code
+
+			app.writeJson(w, response, http.StatusFound)
+			return
+		}
 	}
 
 	var link data.Link
