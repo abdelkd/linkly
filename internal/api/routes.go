@@ -3,6 +3,7 @@ package api
 import (
 	"database/sql"
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 	"os"
@@ -56,10 +57,28 @@ func (app *Application) NewRoutes() *http.ServeMux {
 	mux.HandleFunc("POST /v1/link", app.handleNewLink)
 	mux.HandleFunc("/v1/link/{id}", app.handleGetLink)
 
+	// Handle Static files
+	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
+
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		templ, err := template.ParseFiles("./templates/index.html")
+		if err != nil {
+			app.serverError(w, err)
+			return
+		}
+
+		err = templ.Execute(w, nil)
+		if err != nil {
+			app.serverError(w, err)
+			return
+		}
+	})
+
 	return mux
 }
 
 func (app *Application) NewServer() *http.Server {
+
 	return &http.Server{
 		Addr:         fmt.Sprintf(":%d", app.Cfg.Port),
 		Handler:      app.NewRoutes(),

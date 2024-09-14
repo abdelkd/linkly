@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 
 	"github.com/abdelkd/linkly/internal/data"
 	"github.com/abdelkd/linkly/internal/util"
@@ -47,8 +49,6 @@ func (app *Application) handleNewLink(w http.ResponseWriter, r *http.Request) {
 		app.jsonMessage(w, "location must be a valid url", false, http.StatusBadRequest)
 		return
 	}
-
-	app.InfoLog.Printf("Location: %s, Hash: %s", request.Location, util.HashString(request.Location))
 
 	linkByHash, err := app.Models.Links.GetByHashCode(util.HashString(request.Location))
 	if !errors.Is(err, sql.ErrNoRows) {
@@ -94,4 +94,19 @@ func (app *Application) handleGetLink(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
+}
+
+func (app *Application) handleAssetServe(w http.ResponseWriter, r *http.Request) {
+	filename := r.PathValue("filename")
+	if filename == "" {
+		http.Error(w, "Not Found", http.StatusNotFound)
+		return
+	}
+
+	wd, err := os.Getwd()
+	if err != nil {
+		app.ErrorLog.Fatal(err)
+	}
+
+	http.ServeFile(w, r, filepath.Join(wd, "assets", filename))
 }

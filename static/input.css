@@ -1,0 +1,9 @@
+@tailwind base;
+@tailwind utilities;
+@tailwind components;
+
+@layer base {
+  body {
+    @apply h-screen w-screen overflow-hidden bg-slate-700;
+  }
+}
