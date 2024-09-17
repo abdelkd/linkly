@@ -1,4 +1,4 @@
-const regex = RegExp(/^https:\/\/[a-zA-Z0-9\-_]+(\.[a-zA-Z0-9\-_]+)+(\/[^\s]*)?$/)
+const regex = RegExp(/^https:\/\/[a-zA-Z0-9\-_]+(\.[a-zA-Z0-9\-_]+)+(\/[^\s]*)?\/?$/);
 
 const urlInput = document.querySelector('.url-input')
 const submitButton = document.querySelector('.submit-btn')
@@ -7,6 +7,9 @@ const errorText = document.querySelector('.server-error')
 const copyLinkIcon = document.querySelector('.copy-link')
 const copiedLinkIcon = document.querySelector('.copied-link')
 const generatedLink = document.querySelector('.generated-link')
+
+let urlText = ''
+
 
 const toggleCopyIcons = () => {
     copyLinkIcon.classList.toggle('hidden')
@@ -31,23 +34,24 @@ const handleUrlSubmit = async () => {
   serverResponse.classList.add('hidden')
   serverResponse.classList.remove('flex')
   errorText.textContent = ''
-
-
-  const location = urlInput.value
-
-  if (!regex.test(urlInput.value)) {
-    errorText.textContent = 'URL cannot be empty.'
-    console.error(errorText.textContent)
-    return
-  }
+  console.log(urlText, urlText.length, regex.test(urlText))
 
 
   try {
+    if (urlText.length === 0) {
+      throw new Error('URL cannot be empty.')
+    }
+
+    if (!regex.test(urlText)) {
+      throw new Error('must be a valid URL.')
+    }
+
     const response = await fetch('/v1/link', {
       method: 'POST',
-      body: JSON.stringify({ location })
+      body: JSON.stringify({ location: urlText })
     }).then((r) => r.json())
 
+    console.log({response})
     if (response?.location === null || response?.code === null) throw new Error('Bad Server Response')
 
     generatedLink.textContent = window.origin + '/' + response.code
@@ -56,11 +60,14 @@ const handleUrlSubmit = async () => {
     serverResponse.classList.remove('hidden')
 
   } catch (err) {
-    errorText.textContent = 'Could not create new link, try again.'
-    console.error(err)
+    errorText.textContent = err
+    console.log("from catch", err)
     return
   }
 }
 
 submitButton.addEventListener('click', handleUrlSubmit)
 copyLinkIcon.addEventListener('click', onCopyLinkIconClick)
+urlInput.addEventListener('input', (e) => {
+  urlText = e.target.value
+})

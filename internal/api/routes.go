@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/abdelkd/linkly/internal/data"
+	"github.com/gorilla/mux"
 )
 
 type Application struct {
@@ -49,18 +50,26 @@ func (app *Application) ParseEnv() error {
 	return nil
 }
 
-func (app *Application) NewRoutes() *http.ServeMux {
-	mux := http.NewServeMux()
+func loggerMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Printf("%s - %s\n", r.Method, r.URL.Path)
+		next.ServeHTTP(w, r)
+	})
+}
 
-	mux.HandleFunc("/v1/healthcheck", app.handleHealthCheck)
+func (app *Application) NewRoutes() http.Handler {
+	router := mux.NewRouter()
 
-	mux.HandleFunc("POST /v1/link", app.handleNewLink)
-	mux.HandleFunc("/v1/link/{id}", app.handleGetLink)
+	apiRouter := router.PathPrefix("/v1/").Subrouter()
+	apiRouter.HandleFunc("/healthcheck", app.handleHealthCheck)
+
+	apiRouter.HandleFunc("/link", app.handleNewLink)
+	apiRouter.HandleFunc("/link/{id}", app.handleGetLink)
 
 	// Handle Static files
-	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
-
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
+	router.HandleFunc("/{id}", app.handleGetLink)
+	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		templ, err := template.ParseFiles("./templates/index.html")
 		if err != nil {
 			app.serverError(w, err)
@@ -74,7 +83,7 @@ func (app *Application) NewRoutes() *http.ServeMux {
 		}
 	})
 
-	return mux
+	return loggerMiddleware(router)
 }
 
 func (app *Application) NewServer() *http.Server {

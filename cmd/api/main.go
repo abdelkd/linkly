@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
 
@@ -15,6 +16,7 @@ func main() {
 
 	flag.IntVar(&cfg.Port, "port", 4000, "The default port for the server API")
 	flag.Parse()
+	fmt.Println(cfg)
 
 	errorLog := log.New(os.Stdout, "ERROR\t", log.Ltime|log.Ldate)
 	infoLog := log.New(os.Stdout, "INFO\t", log.Ltime|log.Ldate)

@@ -5,12 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
-	"path/filepath"
 
 	"github.com/abdelkd/linkly/internal/data"
 	"github.com/abdelkd/linkly/internal/util"
 	"github.com/abdelkd/linkly/internal/validator"
+	"github.com/gorilla/mux"
 )
 
 const API_VERSION = 1
@@ -81,7 +80,8 @@ func (app *Application) handleNewLink(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *Application) handleGetLink(w http.ResponseWriter, r *http.Request) {
-	linkCode := r.PathValue("id")
+	vars := mux.Vars(r)
+	linkCode := vars["id"]
 	if linkCode == "" {
 		app.jsonMessage(w, "please provide a valid link code", false, http.StatusNotFound)
 		return
@@ -94,19 +94,4 @@ func (app *Application) handleGetLink(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
-}
-
-func (app *Application) handleAssetServe(w http.ResponseWriter, r *http.Request) {
-	filename := r.PathValue("filename")
-	if filename == "" {
-		http.Error(w, "Not Found", http.StatusNotFound)
-		return
-	}
-
-	wd, err := os.Getwd()
-	if err != nil {
-		app.ErrorLog.Fatal(err)
-	}
-
-	http.ServeFile(w, r, filepath.Join(wd, "assets", filename))
 }
